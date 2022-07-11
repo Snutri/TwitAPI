@@ -1,23 +1,23 @@
 import sys
 import receivers
 import json
+import pandas as pd
 from tokenize import String
+from collections.abc import MutableMapping
+from flatdict import FlatDict
 
 from functools import partial
+from PySide6 import QtCore
 from PySide6.QtCore import Qt, Signal, Slot, QAbstractTableModel
 from PySide6.QtWidgets import (QApplication, QComboBox, QDialog,
                                QDialogButtonBox, QGridLayout, QGroupBox,
                                QFormLayout, QHBoxLayout, QLabel, QLineEdit,
                                QMenu, QMenuBar, QPushButton, QSpinBox,
                                QTextEdit, QVBoxLayout, QWidget, QTableView)
-
+#This file is blessed by chonk 
 state = 0
 tweet_count = 10
 class DataWindow(QWidget):
-    """
-    This "window" is a QWidget. If it has no parent, it
-    will appear as a free-floating window as we want.
-    """
     def __init__(self, data):
         super().__init__()
         self.data = data
@@ -41,24 +41,25 @@ class DataWindow(QWidget):
 class TableModel(QAbstractTableModel):
 
     def __init__(self, data):
-        super(TableModel, self).__init__()
+        QAbstractTableModel.__init__(self)
         self._data = data
 
-    def data(self, index, role):
-        if role == Qt.DisplayRole:
-            # See below for the nested-list data structure.
-            # .row() indexes into the outer list,
-            # .column() indexes into the sub-list
-            return self._data[index.row()][index.column()]
+    def rowCount(self, parent=None):
+        return self._data.shape[0]
 
-    def rowCount(self, index):
-        # The length of the outer list.
-        return len(self._data)
+    def columnCount(self, parent=None):
+        return self._data.shape[1]
 
-    def columnCount(self, index):
-        # The following takes the first sub-list, and returns
-        # the length (only works if all rows are an equal length)
-        return len(self._data[0])
+    def data(self, index, role=Qt.DisplayRole):
+        if index.isValid():
+            if role == Qt.DisplayRole:
+                return str(self._data.iloc[index.row(), index.column()])
+        return None
+
+    def headerData(self, col, orientation, role):
+        if orientation == Qt.Horizontal and role == Qt.DisplayRole:
+            return self._data.columns[col]
+        return None
 
 class MainWindow(QWidget):
 
@@ -94,17 +95,18 @@ class MainWindow(QWidget):
         line_count = QLineEdit()
         line_edit1 = QLineEdit()
         line_edit2 = QLineEdit()
-        line_edit3 = QLineEdit()
+        line_bearer = QLineEdit()
         line_edit4 = QLineEdit()
         btnRun = QPushButton("Run")
         layout.addWidget(lbl_count, 0, 1)
         layout.addWidget(line_count, 1, 1)
-        line_count.setText("10")
+        line_count.setText("5")
         layout.addWidget(label1, 4, 0)
         layout.addWidget(line_edit1, 4, 1)
         line_edit1.setText("elonmusk")
         layout.addWidget(lblBearer, 5, 0)
-        layout.addWidget(line_edit3, 5, 1)
+        line_bearer.setText("header")
+        layout.addWidget(line_bearer, 5, 1)
         layout.addWidget(label2, 6, 0)
         layout.addWidget(line_edit2, 6, 1)
         layout.addWidget(label4, 7, 0)
@@ -122,18 +124,28 @@ class MainWindow(QWidget):
         self.show()
 
         ############################################
-        data = [
-          [4, 9, 2],
-          [1, 0, 0],
-          [3, 5, 0],
-          [3, 3, 2],
-          [7, 8, 9],
-        ]
+        data = []
         #DataWindow(data)
-        self.w = DataWindow(data)
+        
         ############################################
         line_count.textChanged.connect(lambda: save_count(line_count.text()))
-        btnRun.clicked.connect(lambda: run_script(line_edit1.text(),line_edit2.text(),line_edit3.text(),line_edit4.text()))
+        btnRun.clicked.connect(lambda: run_script(line_edit1.text(),line_edit2.text(),line_bearer.text(),line_edit4.text()))
+        TweetList = []
+        datax = json.load(open('demo.json'))
+        df_nested_list = pd.json_normalize(datax, record_path =['data'])
+        #df = pd.DataFrame(datax[1])
+        print(df_nested_list)
+        self.w = DataWindow(df_nested_list)
+        #with open("demo.json") as f:
+        #    print(f"error text: {f}")
+        #    for jsonObj in f:
+        #        TweetDict = json.loads(jsonObj)
+        #        TweetList.append(TweetDict)
+#
+        #print("Printing each JSON Decoded Object")
+        #for Tweet in TweetList:
+        #    print(Tweet["id"], Tweet["name"], Tweet["class"], Tweet["email"])
+
 
         #the basic function to run the api scripts, where the received args are parsed into
         #the right requests and then returned as a dict, which gets turned into json!
@@ -150,7 +162,12 @@ class MainWindow(QWidget):
                 print(state, tweet_count, user, secret, bearer, token)
                 x = f"{state}/{tweet_count}/{user}/{secret}/{bearer}/{token}"
                 dict_response = receivers.api_script(state, tweet_count, user, secret, bearer, token)
+                #dictToCsv(dict_response)
                 json_response = json.dumps(dict_response, indent = 4)
+                #DataWindow(data)
+                #small_editor.setPlainText(json_response)
+                #output = flatten(dict_response)
+                #json.dumps(output)
                 small_editor.setPlainText(json_response)
             
         #active switching of the mode from the buttons, default 1 = usertweetlookup
@@ -163,12 +180,13 @@ class MainWindow(QWidget):
         def save_count(s):
             global tweet_count
             print(f"count entered: {s}")
-            if int(s) <= 5:
+            if int(s) <= 4:
                 small_editor.setPlainText("numbers below 5 will get increased to 5 due to api limitations!")
                 s = 5
             tweet_count = s
             print(f"count of tweets: {tweet_count}")
 
+        #shows/hides a data window
         def show_new_window(self):
             print("opening window!")
             if self.w.isVisible():
@@ -177,10 +195,26 @@ class MainWindow(QWidget):
             else:
                 self.w.show()
 
+        def flatten(d, parent_key='', sep='_'):
+            items = []
+            for k, v in d.items():
+                new_key = parent_key + sep + k if parent_key else k
+                if isinstance(v, MutableMapping):
+                    items.extend(flatten(v, new_key, sep=sep).items())
+                else:
+                    items.append((new_key, v))
+            return dict(items)
+
+
+        #this code doesnt really work without unparsed code
+        #dictToCsv(dict goes here)
+        #def dictToCsv(s):
+        #    df = pd.Series(data=s, index=[5])
+        #    df = (df.T)
+        #    print (df)
+        #    df.to_excel('s.xlsx')
         
-        
-    #test = line_edit1.text()
-    #print(test) 
+
 
 if __name__ == '__main__':
     app = QApplication(sys.argv)

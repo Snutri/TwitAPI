@@ -22,7 +22,8 @@ def UserLikeLookUp(USER_ID, TwtCount):
 def UserTweetLookUp(USER_ID, TwtCount):
     url = f"https://api.twitter.com/2/users/{USER_ID}/tweets?max_results={TwtCount}"
     json_response = connect_to_endpoint(url)
-    SendToTerminal(json_response)
+    #SendToTerminal(json_response)
+    SendToArchive(json_response)
     return json_response
 
 #def TweetLikerLookUp(TWEET_ID):
@@ -33,9 +34,10 @@ def UserTweetLookUp(USER_ID, TwtCount):
 
 def UserTimelineLookUp(USER_ID, TwtCount):
     #url = f"https://api.twitter.com/1.1/statuses/user_timeline.json?user_id={USER_ID}&count={TwtCount}"
-    url = f"https://api.twitter.com/2/users/{USER_ID}/tweets?max_results={TwtCount}&tweet.fields=created_at,public_metrics,entities&exclude=retweets,replies"
+    url = f"https://api.twitter.com/2/users/{USER_ID}/tweets?max_results={TwtCount}&tweet.fields=created_at,attachments,public_metrics&exclude=retweets,replies"
     json_response = connect_to_endpoint(url)
-    SendToTerminal(json_response)
+    #SendToTerminal(json_response)
+    SendToArchive(json_response, USER_ID, "TimeLine")
     return json_response
 
 def bearer_oauth(r):
