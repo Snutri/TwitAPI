@@ -19,11 +19,11 @@ def UserLikeLookUp(USER_ID, TwtCount):
     #SendToArchive(json_response, USER_ID, "Userlikes")
     return json_response
 
-def UserTweetLookUp(USER_ID, TwtCount):
+def UserTweetLookUp(USER_ID, user, TwtCount):
     url = f"https://api.twitter.com/2/users/{USER_ID}/tweets?max_results={TwtCount}"
     json_response = connect_to_endpoint(url)
     #SendToTerminal(json_response)
-    SendToArchive(json_response)
+    SendToArchive(json_response, "Tweets", user)
     return json_response
 
 #def TweetLikerLookUp(TWEET_ID):
@@ -32,12 +32,18 @@ def UserTweetLookUp(USER_ID, TwtCount):
 #    SendToTerminal(json_response)
 #    return json_response
 
-def UserTimelineLookUp(USER_ID, TwtCount):
+def UserTimelineLookUp(USER_ID, user, TwtCount):
     #url = f"https://api.twitter.com/1.1/statuses/user_timeline.json?user_id={USER_ID}&count={TwtCount}"
     url = f"https://api.twitter.com/2/users/{USER_ID}/tweets?max_results={TwtCount}&tweet.fields=created_at,attachments,public_metrics&exclude=retweets,replies"
     json_response = connect_to_endpoint(url)
     #SendToTerminal(json_response)
-    SendToArchive(json_response, USER_ID, "TimeLine")
+    try:
+        x = json_response["meta"]["next_token"]
+        print(x)
+    except:
+        print("something happened with next token")
+    
+    SendToArchive(json_response, "TimeLine", user,)
     return json_response
 
 def bearer_oauth(r):
@@ -73,13 +79,13 @@ def api_script(state, tweet_count, user, secret, bearer, token):
     #TweetLikerLookUp("useridhere")
     match state:
         case 1:
-            s = UserTweetLookUp(lookupuser(user), f"{tweet_count}")
+            s = UserTweetLookUp(lookupuser(user), user, f"{tweet_count}")
             return s
         case 2:
             s = UserLikeLookUp(lookupuser(user), f"{tweet_count}")
             return s
         case 3:
-            s = UserTimelineLookUp(lookupuser(user), f"{tweet_count}")
+            s = UserTimelineLookUp(lookupuser(user), user, f"{tweet_count}")
             return s
 
             
