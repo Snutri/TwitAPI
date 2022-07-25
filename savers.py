@@ -3,6 +3,7 @@ import datetime
 import os
 import json
 import pandas as pd
+import jsonmerge
 time = datetime.datetime.utcnow().strftime("%Y-%m-%d-%H%MZ")
 def SendToFile(jsonfile, searchterm, type):
     with open(f'{type}-{searchterm}-{time}.json', 'w', encoding='utf-8') as f:
@@ -18,20 +19,46 @@ def SendToArchive(jsonfile, searchterm, user):
 
     if (os.path.exists(filename) and (os.path.getsize(filename)>0)):
         
+        #loaded1 = json.load(open(filename))
+        #loaded2 = jsonfile
+#
+        #loaded1['data'].append(loaded2['data'])
         with open(filename,'r+') as file:
-
+        
             a = json.load(file)
-            a2 = json.dumps(a)
-            b3 = json.dumps(jsonfile)
-
-            jsonMerged = {**json.loads(a2), **json.loads(b3)}
-
-            json.dump(jsonMerged, file, indent=4)
-
-
+            schema = {
+                "properties": {
+                  "data": {
+                    "mergeStrategy": "arrayMergeById"
+                }, 
+                "includes": {
+                    "type": "object",
+                    "properties": {
+                      "users": {
+                        "mergeStrategy": "arrayMergeById"
+                      },
+                      "tweets": {
+                        "mergeStrategy": "arrayMergeById"
+                      },
+                      "polls": {
+                        "mergeStrategy": "arrayMergeById"
+                      },
+                      "places": {
+                        "mergeStrategy": "arrayMergeById"
+                      },
+                      "media": {
+                        "mergeStrategy": "arrayMergeById"
+                      }
+                    }
+                  }
+                }
+            }
+            merger = jsonmerge.Merger(schema)
+            base = a
+            base = merger.merge(base, jsonfile)
 
         with open(filename, 'w', encoding='utf-8') as f:
-            json.dump(jsonMerged, f, ensure_ascii=False, indent=4)
+            json.dump(base, f, ensure_ascii=False, indent=4)
     else:
         with open(filename, 'w', encoding='utf-8') as f:
             json.dump(jsonfile, f, ensure_ascii=False, indent=4)
