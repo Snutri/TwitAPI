@@ -14,7 +14,6 @@ from PySide6.QtWidgets import (QApplication, QComboBox, QDialog,
                                QFormLayout, QHBoxLayout, QLabel, QLineEdit,
                                QMenu, QMenuBar, QPushButton, QSpinBox,
                                QTextEdit, QVBoxLayout, QWidget, QTableView)
-#This file is blessed by chonk 
 state = 0
 tweet_count = 10
 class DataWindow(QWidget):
@@ -63,31 +62,31 @@ def sortbyinput(self, input, data):
             return 
         case 2:
             data.sort_values(by=['retweets'], ascending=False, inplace=True, ignore_index=True)
-            print(data.retweets.to_string(index=False))
+            #print(data.retweets.to_string(index=False))
             self.update()
             self.model.layoutChanged.emit()
             return
         case 3:
             data.sort_values(by=['likes'], ascending=False, inplace=True, ignore_index=True)
-            print(data.retweets.to_string(index=False))
+            #print(data.retweets.to_string(index=False))
             self.update()
             self.model.layoutChanged.emit()
             return 
         case 4:
             data.sort_values(by=['quotes'], ascending=False, inplace=True, ignore_index=True)
-            print(data.retweets.to_string(index=False))
+            #print(data.retweets.to_string(index=False))
             self.update()
             self.model.layoutChanged.emit()
             return 
         case 5:
             data.sort_values(by=['id'], ascending=False, inplace=True, ignore_index=True)
-            print(data.retweets.to_string(index=False))
+            #print(data.retweets.to_string(index=False))
             self.update()
             self.model.layoutChanged.emit()
             return 
         case 6:
             data.sort_values(by=['replies'], ascending=False, inplace=True, ignore_index=True)
-            print(data.retweets.to_string(index=False))
+            #print(data.retweets.to_string(index=False))
             self.update()
             self.model.layoutChanged.emit()
             return 
@@ -133,10 +132,13 @@ class MainWindow(QWidget):
         btnLikes = QPushButton(f"Fetch likes")
         btnTime = QPushButton(f"Fetch timeline")
         btnData = QPushButton(f"open data window")
+        line_user = QLineEdit()
         layout.addWidget(btnFetch, 0, 0)
         layout.addWidget(btnLikes, 1, 0)
         layout.addWidget(btnTime, 2, 0)
         layout.addWidget(btnData, 3, 0)
+        layout.addWidget(line_user, 3, 1)
+        line_user.setPlaceholderText("username to get data from") 
         btnFetch.clicked.connect(lambda: mode_switch(1))
         btnLikes.clicked.connect(lambda: mode_switch(2))
         btnTime.clicked.connect(lambda: mode_switch(3))
@@ -153,6 +155,7 @@ class MainWindow(QWidget):
         line_edit2 = QLineEdit()
         line_bearer = QLineEdit()
         line_edit4 = QLineEdit()
+        
         btnRun = QPushButton("Run")
         layout.addWidget(lbl_count, 0, 1)
         layout.addWidget(line_count, 1, 1)
@@ -161,7 +164,7 @@ class MainWindow(QWidget):
         layout.addWidget(line_edit1, 4, 1)
         line_edit1.setText("elonmusk")
         layout.addWidget(lblBearer, 5, 0)
-        line_bearer.setText("bearer goes here")
+        line_bearer.setText("AAAAAAAAAAAAAAAAAAAAAD%2FEcQEAAAAARa58Xko7HNTU%2FPuQsPa%2FlJ6Zb94%3Db0SaILgQmlBzoTlN6MEkw2qx3iKOzXWnVdvsnRbwZlqrZIr6kr")
         layout.addWidget(line_bearer, 5, 1)
         layout.addWidget(label2, 6, 0)
         layout.addWidget(line_edit2, 6, 1)
@@ -188,16 +191,17 @@ class MainWindow(QWidget):
         btnRun.clicked.connect(lambda: run_script(line_edit1.text(),line_edit2.text(),line_bearer.text(),line_edit4.text()))
         TweetList = []
         #dataframe()
-        try:
-            datax = json.load(open('elonmusk-TimeLine.json'))
-            list(datax)
-            df_nested_list = pd.json_normalize(datax, record_path =['data'])
-            list(df_nested_list)
-            print(df_nested_list)
-            df_nested_list.rename(columns = {"public_metrics.retweet_count":"retweets", "public_metrics.reply_count":"replies", "public_metrics.like_count":"likes", "public_metrics.quote_count":"quotes", "attachments.media_keys":"media"}, inplace = True)
-            self.w = DataWindow(df_nested_list)
-        except:
-            print("data was unavailable")
+        #try:
+        #    print(f'{line_user.text()}-TimeLine.json')
+        #    datax = json.load(open(f'elonmusk-TimeLine.json'))
+        #    list(datax)
+        #    df_nested_list = pd.json_normalize(datax, record_path =['data'])
+        #    list(df_nested_list)
+        #    #print(df_nested_list)
+        #    df_nested_list.rename(columns = {"public_metrics.retweet_count":"retweets", "public_metrics.reply_count":"replies", "public_metrics.like_count":"likes", "public_metrics.quote_count":"quotes", "attachments.media_keys":"media"}, inplace = True)
+        #    self.w = DataWindow(df_nested_list)
+        #except:
+        #    print("data was unavailable")
         
         #the basic function to run the api scripts, where the received args are parsed into
         #the right requests and then returned as a dict, which gets turned into json!
@@ -211,7 +215,7 @@ class MainWindow(QWidget):
                 print("no mode selected")
 
             else:
-                print(state, tweet_count, user, secret, bearer, token)
+                #print(state, tweet_count, user, secret, bearer, token)
                 x = f"{state}/{tweet_count}/{user}/{secret}/{bearer}/{token}"
                 dict_response = receivers.api_script(state, tweet_count, user, secret, bearer, token)
                 #dictToCsv(dict_response)
@@ -221,7 +225,7 @@ class MainWindow(QWidget):
                 #output = flatten(dict_response)
                 #json.dumps(output)
                 small_editor.setPlainText(json_response)
-            
+        
         #active switching of the mode from the buttons, default 1 = usertweetlookup
         def mode_switch(s):
             global state
@@ -232,39 +236,23 @@ class MainWindow(QWidget):
         def save_count(s):
             global tweet_count
             print(f"count entered: {s}")
-            if int(s) <= 4:
-                small_editor.setPlainText("numbers below 5 will get increased to 5 due to api limitations!")
-                s = 5
+            if int(s) <= 9:
+                small_editor.setPlainText("numbers below 10 will get increased to 10 due to api limitations!")
+                s = 10
             tweet_count = s
             print(f"count of tweets: {tweet_count}")
 
-        #shows/hides a data window
+        #opens data window with specified persons tweets w
         def show_new_window(self):
-            print("opening window!")
-            if self.w.isVisible():
-                self.w.hide()
-
-            else:
-                self.w.show()
-
-        def dataframe():
-            datax = json.load(open('elonmusk-TimeLine.json'))
+            datax = json.load(open(f'{line_user.text()}-TimeLine.json'))
             list(datax)
             df_nested_list = pd.json_normalize(datax, record_path =['data'])
             list(df_nested_list)
-            print(df_nested_list)
+            #print(df_nested_list)
             df_nested_list.rename(columns = {"public_metrics.retweet_count":"retweets", "public_metrics.reply_count":"replies", "public_metrics.like_count":"likes", "public_metrics.quote_count":"quotes", "attachments.media_keys":"media"}, inplace = True)
             self.w = DataWindow(df_nested_list)
-
-        #this code doesnt really work without unparsed code
-        #dictToCsv(dict goes here)
-        #def dictToCsv(s):
-        #    df = pd.Series(data=s, index=[5])
-        #    df = (df.T)
-        #    print (df)
-        #    df.to_excel('s.xlsx')
-        
-
+            self.w.show()
+            print("opening window!")
 
 if __name__ == '__main__':
     app = QApplication(sys.argv)

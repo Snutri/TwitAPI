@@ -45,9 +45,9 @@ def SendToArchive(jsonfile, searchterm, user):
                       },
                       "places": {
                         "mergeStrategy": "arrayMergeById"
-                      },
-                      "media": {
-                        "mergeStrategy": "arrayMergeById"
+                      #},
+                      #"media": {
+                      #  "mergeStrategy": "arrayMergeById"
                       }
                     }
                   }

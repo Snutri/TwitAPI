@@ -6,11 +6,10 @@ import json
 from savers import SendToFile, SendToTerminal, SendToArchive
 from dotenv import load_dotenv 
 load_dotenv()
-
+import time
 #consumer_key = os.getenv("APIKey")
 #consumer_secret = os.getenv("APIKeySecret")
 #bearer_token = os.getenv("BearerToken")
-
 
 def UserLikeLookUp(USER_ID, TwtCount):
     url = f"https://api.twitter.com/2/users/{USER_ID}/liked_tweets?max_results={TwtCount}"
@@ -33,18 +32,44 @@ def UserTweetLookUp(USER_ID, user, TwtCount):
 #    return json_response
 
 def UserTimelineLookUp(USER_ID, user, TwtCount):
-    #url = f"https://api.twitter.com/1.1/statuses/user_timeline.json?user_id={USER_ID}&count={TwtCount}"
-    url = f"https://api.twitter.com/2/users/{USER_ID}/tweets?max_results={TwtCount}&tweet.fields=created_at,attachments,public_metrics&exclude=retweets,replies"
-    json_response = connect_to_endpoint(url)
-    #SendToTerminal(json_response)
-    try:
-        x = json_response["meta"]["next_token"]
-        print(x)
-    except:
-        print("something happened with next token")
-    
-    SendToArchive(json_response, "TimeLine", user,)
-    return json_response
+    next_token = ""
+    h = 100
+    TwtCount = int(TwtCount)
+    while TwtCount > 0:
+        time.sleep(1)
+        #case where its the first search, and has more than 100 tweets
+        if (TwtCount > h) and (next_token == ""):
+            url = f"https://api.twitter.com/2/users/{USER_ID}/tweets?max_results={h}&tweet.fields=created_at,public_metrics&media.fields=preview_image_url,url&exclude=retweets,replies"
+            json_response = connect_to_endpoint(url)
+            SendToArchive(json_response, "TimeLine", user,)
+            next_token = json_response["meta"]["next_token"]
+            TwtCount -= h
+        #case where its the first search, and has less than 100 tweets
+        elif (TwtCount < h) and (next_token == ""):
+            url = f"https://api.twitter.com/2/users/{USER_ID}/tweets?max_results={TwtCount}&tweet.fields=created_at,public_metrics&media.fields=preview_image_url,url&exclude=retweets,replies"
+            json_response = connect_to_endpoint(url)
+            SendToArchive(json_response, "TimeLine", user,)
+            next_token = json_response["meta"]["next_token"]
+            print(next_token)
+            return 1
+        #case where there is a next token, and theres more than 100 tweets remaining
+        elif int(TwtCount) > h:
+            url = f"https://api.twitter.com/2/users/{USER_ID}/tweets?max_results={h}&tweet.fields=created_at,public_metrics&media.fields=preview_image_url,url&exclude=retweets,replies&pagination_token={next_token}"
+            json_response = connect_to_endpoint(url)
+            SendToArchive(json_response, "TimeLine", user,)
+            next_token = json_response["meta"]["next_token"]
+            TwtCount -= h
+        #case where there is less than 100 tweets remaining and no token, or something messed up
+        else:
+            if int(TwtCount) > 10:
+                TwtCount = 10
+            url = f"https://api.twitter.com/2/users/{USER_ID}/tweets?max_results={TwtCount}&tweet.fields=created_at,public_metrics&media.fields=preview_image_url,url&exclude=retweets,replies&pagination_token={next_token}"
+            json_response = connect_to_endpoint(url)
+            SendToArchive(json_response, "TimeLine", user,)
+            next_token = ""
+            print("all wanted tweets read, finishing fetch!")
+            return 
+
 
 def bearer_oauth(r):
     r.headers["Authorization"] = f"Bearer {bearer_token}"
@@ -56,7 +81,7 @@ def lookupuser(u):
     ux = f"https://api.twitter.com/2/users/by/username/{u}"
     json_response = connect_to_endpoint(ux)
     userID = json_response["data"]["id"]
-    print(userID)
+    #print(userID)
     return userID
 
 def connect_to_endpoint(url):
@@ -74,7 +99,7 @@ def connect_to_endpoint(url):
 def api_script(state, tweet_count, user, secret, bearer, token):
     global bearer_token
     bearer_token = str(bearer)
-    print("---------------------------------------")
+    #print("---------------------------------------")
     #UserLikeLookUp(lookupuser("usernamehere"), "5")
     #TweetLikerLookUp("useridhere")
     match state:
