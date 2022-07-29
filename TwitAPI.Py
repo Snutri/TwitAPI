@@ -122,27 +122,27 @@ class MainWindow(QWidget):
     def __init__(self):
         super().__init__()
         width = 720
-        height = 360
+        height = 400
         self.setWindowTitle("TwitAPI")
         self.setMinimumSize(width, height)
         layout = QGridLayout()
         self.w = DataWindow
         #choose mode buttons
         btnFetch = QPushButton(f"Fetch tweets")
+        btnFetch.clicked.connect(lambda: mode_switch(1))
         btnLikes = QPushButton(f"Fetch likes")
+        btnLikes.clicked.connect(lambda: mode_switch(2))
         btnTime = QPushButton(f"Fetch timeline")
+        btnTime.clicked.connect(lambda: mode_switch(3))
         btnData = QPushButton(f"open data window")
+        btnData.clicked.connect(lambda: show_new_window(self))
         line_user = QLineEdit()
         layout.addWidget(btnFetch, 0, 0)
         layout.addWidget(btnLikes, 1, 0)
         layout.addWidget(btnTime, 2, 0)
         layout.addWidget(btnData, 3, 0)
         layout.addWidget(line_user, 3, 1)
-        line_user.setPlaceholderText("username to get data from") 
-        btnFetch.clicked.connect(lambda: mode_switch(1))
-        btnLikes.clicked.connect(lambda: mode_switch(2))
-        btnTime.clicked.connect(lambda: mode_switch(3))
-        btnData.clicked.connect(lambda: show_new_window(self))
+        line_user.setPlaceholderText("username to open data from") 
         #data input code
         lbl_count = QLabel(f"number of tweets to fetch:")
         label1 = QLabel(f"User name to fetch:")
@@ -154,6 +154,7 @@ class MainWindow(QWidget):
         line_edit1 = QLineEdit()
         line_edit2 = QLineEdit()
         line_bearer = QLineEdit()
+        line_bearer.setPlaceholderText("Set your bearer here")
         line_edit4 = QLineEdit()
         
         btnRun = QPushButton("Run")
@@ -164,7 +165,7 @@ class MainWindow(QWidget):
         layout.addWidget(line_edit1, 4, 1)
         line_edit1.setText("elonmusk")
         layout.addWidget(lblBearer, 5, 0)
-        line_bearer.setText("AAAAAAAAAAAAAAAAAAAAAD%2FEcQEAAAAARa58Xko7HNTU%2FPuQsPa%2FlJ6Zb94%3Db0SaILgQmlBzoTlN6MEkw2qx3iKOzXWnVdvsnRbwZlqrZIr6kr")
+        line_bearer.setText("")
         layout.addWidget(line_bearer, 5, 1)
         layout.addWidget(label2, 6, 0)
         layout.addWidget(line_edit2, 6, 1)
@@ -175,7 +176,7 @@ class MainWindow(QWidget):
         #data displayer
         small_editor = QTextEdit()
         small_editor.setPlainText("The results will be displayed here")
-        layout.addWidget(small_editor, 0, 2, 8, 1)
+        layout.addWidget(small_editor, 10, 0, 3, 3)
         layout.setColumnStretch(1, 10)
         layout.setColumnStretch(2, 20)
 
