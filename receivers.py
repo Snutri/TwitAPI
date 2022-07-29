@@ -39,14 +39,14 @@ def UserTimelineLookUp(USER_ID, user, TwtCount):
         time.sleep(1)
         #case where its the first search, and has more than 100 tweets
         if (TwtCount > h) and (next_token == ""):
-            url = f"https://api.twitter.com/2/users/{USER_ID}/tweets?max_results={h}&tweet.fields=created_at,public_metrics&media.fields=preview_image_url,url&exclude=retweets,replies"
+            url = f"https://api.twitter.com/2/users/{USER_ID}/tweets?max_results={h}&expansions=attachments.media_keys&tweet.fields=created_at,public_metrics&media.fields=url&exclude=retweets,replies"
             json_response = connect_to_endpoint(url)
             SendToArchive(json_response, "TimeLine", user,)
             next_token = json_response["meta"]["next_token"]
             TwtCount -= h
         #case where its the first search, and has less than 100 tweets
         elif (TwtCount < h) and (next_token == ""):
-            url = f"https://api.twitter.com/2/users/{USER_ID}/tweets?max_results={TwtCount}&tweet.fields=created_at,public_metrics&media.fields=preview_image_url,url&exclude=retweets,replies"
+            url = f"https://api.twitter.com/2/users/{USER_ID}/tweets?max_results={TwtCount}&expansions=attachments.media_keys&media.fields=url&tweet.fields=created_at,public_metrics&exclude=retweets,replies"
             json_response = connect_to_endpoint(url)
             SendToArchive(json_response, "TimeLine", user,)
             next_token = json_response["meta"]["next_token"]
@@ -54,7 +54,7 @@ def UserTimelineLookUp(USER_ID, user, TwtCount):
             return 1
         #case where there is a next token, and theres more than 100 tweets remaining
         elif int(TwtCount) > h:
-            url = f"https://api.twitter.com/2/users/{USER_ID}/tweets?max_results={h}&tweet.fields=created_at,public_metrics&media.fields=preview_image_url,url&exclude=retweets,replies&pagination_token={next_token}"
+            url = f"https://api.twitter.com/2/users/{USER_ID}/tweets?max_results={h}&expansions=attachments.media_keys&tweet.fields=created_at,public_metrics&media.fields=url&exclude=retweets,replies&pagination_token={next_token}"
             json_response = connect_to_endpoint(url)
             SendToArchive(json_response, "TimeLine", user,)
             next_token = json_response["meta"]["next_token"]
@@ -63,7 +63,7 @@ def UserTimelineLookUp(USER_ID, user, TwtCount):
         else:
             if int(TwtCount) > 10:
                 TwtCount = 10
-            url = f"https://api.twitter.com/2/users/{USER_ID}/tweets?max_results={TwtCount}&tweet.fields=created_at,public_metrics&media.fields=preview_image_url,url&exclude=retweets,replies&pagination_token={next_token}"
+            url = f"https://api.twitter.com/2/users/{USER_ID}/tweets?max_results={TwtCount}&expansions=attachments.media_keys&tweet.fields=created_at,public_metrics&media.fields=url&exclude=retweets,replies&pagination_token={next_token}"
             json_response = connect_to_endpoint(url)
             SendToArchive(json_response, "TimeLine", user,)
             next_token = ""
