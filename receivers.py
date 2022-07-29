@@ -32,43 +32,52 @@ def UserTweetLookUp(USER_ID, user, TwtCount):
 #    return json_response
 
 def UserTimelineLookUp(USER_ID, user, TwtCount):
+    query = "&expansions=attachments.media_keys&tweet.fields=created_at,public_metrics&media.fields=url&exclude=retweets,replies"
+    type = "TimeLine"
+    urlFormatter(USER_ID, user, TwtCount, query, type)
+    return
+
+def imageSearcher(USER_ID, user, TwtCount):
+    query = "&expansions=attachments.media_keys&media.fields=url&exclude=retweets,replies"
+    type = "Images"
+    urlFormatter(USER_ID, user, TwtCount, query, type)
+    return
+
+def urlFormatter(USER_ID, user, TwtCount, query, type):
     next_token = ""
     h = 100
     TwtCount = int(TwtCount)
     while TwtCount > 0:
-        time.sleep(1)
-        #case where its the first search, and has more than 100 tweets
-        if (TwtCount > h) and (next_token == ""):
-            url = f"https://api.twitter.com/2/users/{USER_ID}/tweets?max_results={h}&expansions=attachments.media_keys&tweet.fields=created_at,public_metrics&media.fields=url&exclude=retweets,replies"
-            json_response = connect_to_endpoint(url)
-            SendToArchive(json_response, "TimeLine", user,)
-            next_token = json_response["meta"]["next_token"]
-            TwtCount -= h
-        #case where its the first search, and has less than 100 tweets
-        elif (TwtCount < h) and (next_token == ""):
-            url = f"https://api.twitter.com/2/users/{USER_ID}/tweets?max_results={TwtCount}&expansions=attachments.media_keys&media.fields=url&tweet.fields=created_at,public_metrics&exclude=retweets,replies"
-            json_response = connect_to_endpoint(url)
-            SendToArchive(json_response, "TimeLine", user,)
-            next_token = json_response["meta"]["next_token"]
-            print(next_token)
-            return 1
-        #case where there is a next token, and theres more than 100 tweets remaining
-        elif int(TwtCount) > h:
-            url = f"https://api.twitter.com/2/users/{USER_ID}/tweets?max_results={h}&expansions=attachments.media_keys&tweet.fields=created_at,public_metrics&media.fields=url&exclude=retweets,replies&pagination_token={next_token}"
-            json_response = connect_to_endpoint(url)
-            SendToArchive(json_response, "TimeLine", user,)
-            next_token = json_response["meta"]["next_token"]
-            TwtCount -= h
-        #case where there is less than 100 tweets remaining and no token, or something messed up
-        else:
-            if int(TwtCount) > 10:
-                TwtCount = 10
-            url = f"https://api.twitter.com/2/users/{USER_ID}/tweets?max_results={TwtCount}&expansions=attachments.media_keys&tweet.fields=created_at,public_metrics&media.fields=url&exclude=retweets,replies&pagination_token={next_token}"
-            json_response = connect_to_endpoint(url)
-            SendToArchive(json_response, "TimeLine", user,)
-            next_token = ""
-            print("all wanted tweets read, finishing fetch!")
-            return 
+            time.sleep(1)
+            #case where its the first search, and has more than 100 tweets
+            if (TwtCount > h) and (next_token == ""):
+                next_token = pullTweets(USER_ID, user, h, next_token, query, type)
+                TwtCount -= h
+            #case where its the first search, and has less than 100 tweets
+            elif (TwtCount < h) and (next_token == ""):
+                next_token = pullTweets(USER_ID, user, TwtCount, next_token, query, type)
+                print("all wanted tweets read, finishing fetch!")
+                return 1
+            #case where there is a next token, and theres more than 100 tweets remaining
+            elif int(TwtCount) > h:
+                next_token = pullTweets(USER_ID, user, h, next_token, query, type)
+                TwtCount -= h
+            #case where there is less than 100 tweets remaining and no token, or something messed up
+            else:
+                pullTweets (USER_ID, user, TwtCount, next_token, query, type)
+                next_token = ""
+                print("all wanted tweets read, finishing fetch!")
+                return 
+
+
+def pullTweets (USER_ID, user, max_results, next_token, query, type):
+    url = f"https://api.twitter.com/2/users/{USER_ID}/tweets?max_results={max_results}{query}"
+    if (next_token != ""):
+        url += "&pagination_token={next_token}"
+    json_response = connect_to_endpoint(url)
+    SendToArchive(json_response, type, user,)
+    next_token = json_response["meta"]["next_token"]
+    return next_token
 
 
 def bearer_oauth(r):
@@ -107,7 +116,7 @@ def api_script(state, tweet_count, user, secret, bearer, token):
             s = UserTweetLookUp(lookupuser(user), user, f"{tweet_count}")
             return s
         case 2:
-            s = UserLikeLookUp(lookupuser(user), f"{tweet_count}")
+            s = imageSearcher(lookupuser(user), user, f"{tweet_count}")
             return s
         case 3:
             s = UserTimelineLookUp(lookupuser(user), user, f"{tweet_count}")
