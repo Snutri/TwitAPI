@@ -136,12 +136,18 @@ class MainWindow(QWidget):
         btnTime.clicked.connect(lambda: mode_switch(3))
         btnData = QPushButton(f"open data window")
         btnData.clicked.connect(lambda: show_new_window(self))
+        btnTimer = QPushButton(f"Set a timer to run")
+        btnTimer.clicked.connect(lambda: show_new_window(self))
+        line_timer = QLineEdit()
+        line_timer.setPlaceholderText("Delay in minutes")
         line_user = QLineEdit()
         layout.addWidget(btnFetch, 0, 0)
         layout.addWidget(btnLikes, 1, 0)
         layout.addWidget(btnTime, 2, 0)
         layout.addWidget(btnData, 3, 0)
         layout.addWidget(line_user, 3, 1)
+        layout.addWidget(line_timer, 0, 3)
+        layout.addWidget(btnTimer, 0, 2)
         line_user.setPlaceholderText("username to open data from") 
         #data input code
         lbl_count = QLabel(f"number of tweets to fetch:")
@@ -158,6 +164,7 @@ class MainWindow(QWidget):
         line_edit4 = QLineEdit()
         
         btnRun = QPushButton("Run")
+        btnClear = QPushButton("Clear log")
         layout.addWidget(lbl_count, 0, 1)
         layout.addWidget(line_count, 1, 1)
         line_count.setText("5")
@@ -165,20 +172,23 @@ class MainWindow(QWidget):
         layout.addWidget(line_edit1, 4, 1)
         line_edit1.setText("elonmusk")
         layout.addWidget(lblBearer, 5, 0)
-        line_bearer.setText("")
+        line_bearer.setText("AAAAAAAAAAAAAAAAAAAAAD%2FEcQEAAAAAVkxu3YGhzEpx241560UHPC%2F5uvY%3DdC3dJP4sUPXCeq5f2Hx4Aaz4MONqFaGinKK4eR2sIhrvAaYJus")
         layout.addWidget(line_bearer, 5, 1)
         layout.addWidget(label2, 6, 0)
         layout.addWidget(line_edit2, 6, 1)
         layout.addWidget(label4, 7, 0)
         layout.addWidget(line_edit4, 7, 1)
         layout.addWidget(btnRun, 8, 1)
+        layout.addWidget(btnClear, 8, 0)
         
         #data displayer
         small_editor = QTextEdit()
         small_editor.setPlainText("The results will be displayed here")
-        layout.addWidget(small_editor, 10, 0, 3, 3)
+        layout.addWidget(small_editor, 10, 0, 6, 6)
         layout.setColumnStretch(1, 10)
-        layout.setColumnStretch(2, 20)
+        layout.setColumnStretch(2, 10)
+        layout.setColumnStretch(3, 20)
+        layout.setColumnStretch(4, 20)
 
         self.setLayout(layout)
         self.show()
@@ -190,6 +200,7 @@ class MainWindow(QWidget):
         ############################################
         line_count.textChanged.connect(lambda: save_count(line_count.text()))
         btnRun.clicked.connect(lambda: run_script(line_edit1.text(),line_edit2.text(),line_bearer.text(),line_edit4.text()))
+        btnClear.clicked.connect(lambda: small_editor.setPlainText(""))
         TweetList = []
         #dataframe()
         #try:
@@ -208,11 +219,11 @@ class MainWindow(QWidget):
         #the right requests and then returned as a dict, which gets turned into json!
         def run_script(user, secret, bearer, token):
             if (user == "") or (bearer == ""):
-                small_editor.setPlainText("some of the fields werent filled")
+                small_editor.append("some of the fields werent filled")
                 print("some of the fields werent filled ,redo")
 
             elif (state == 0):
-                small_editor.setPlainText("no mode selected!")
+                small_editor.append("no mode selected!")
                 print("no mode selected")
 
             else:
@@ -241,19 +252,22 @@ class MainWindow(QWidget):
                 small_editor.setPlainText("numbers below 10 will get increased to 10 due to api limitations!")
                 s = 10
             tweet_count = s
-            print(f"count of tweets: {tweet_count}")
+
 
         #opens data window with specified persons tweets w
         def show_new_window(self):
-            datax = json.load(open(f'{line_user.text()}-TimeLine.json'))
-            list(datax)
-            df_nested_list = pd.json_normalize(datax, record_path =['data'])
-            list(df_nested_list)
-            #print(df_nested_list)
-            df_nested_list.rename(columns = {"public_metrics.retweet_count":"retweets", "public_metrics.reply_count":"replies", "public_metrics.like_count":"likes", "public_metrics.quote_count":"quotes", "attachments.media_keys":"media"}, inplace = True)
-            self.w = DataWindow(df_nested_list)
-            self.w.show()
-            print("opening window!")
+            try:
+                datax = json.load(open(f'{line_user.text()}-TimeLine.json'))
+                list(datax)
+                df_nested_list = pd.json_normalize(datax, record_path =['data'])
+                list(df_nested_list)
+                #print(df_nested_list)
+                df_nested_list.rename(columns = {"public_metrics.retweet_count":"retweets", "public_metrics.reply_count":"replies", "public_metrics.like_count":"likes", "public_metrics.quote_count":"quotes", "attachments.media_keys":"media"}, inplace = True)
+                self.w = DataWindow(df_nested_list)
+                self.w.show()
+                print("opening window!")
+            except FileNotFoundError:
+                small_editor.append("No user was specified or the name had a typo")
 
 if __name__ == '__main__':
     app = QApplication(sys.argv)
