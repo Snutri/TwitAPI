@@ -76,7 +76,11 @@ def pullTweets (USER_ID, user, max_results, next_token, query, type):
         url += "&pagination_token={next_token}"
     json_response = connect_to_endpoint(url)
     SendToArchive(json_response, type, user,)
-    next_token = json_response["meta"]["next_token"]
+    try:
+        next_token = json_response["meta"]["next_token"]
+    except KeyError:
+        print("no next token returned")
+        return
     return next_token
 
 

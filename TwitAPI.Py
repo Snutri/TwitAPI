@@ -5,10 +5,10 @@ import pandas as pd
 from tokenize import String
 from collections.abc import MutableMapping
 from flatdict import FlatDict
-
+import threading
 from functools import partial
 from PySide6 import QtCore
-from PySide6.QtCore import Qt, Signal, Slot, QAbstractTableModel
+from PySide6.QtCore import Qt, Signal, Slot, QAbstractTableModel, QRunnable, QThreadPool
 from PySide6.QtWidgets import (QApplication, QComboBox, QDialog,
                                QDialogButtonBox, QGridLayout, QGroupBox,
                                QFormLayout, QHBoxLayout, QLabel, QLineEdit,
@@ -121,6 +121,7 @@ class MainWindow(QWidget):
     num_grid_rows = 3
     def __init__(self):
         super().__init__()
+        self.threadpool = QThreadPool()
         width = 720
         height = 400
         self.setWindowTitle("TwitAPI")
@@ -193,30 +194,24 @@ class MainWindow(QWidget):
         self.setLayout(layout)
         self.show()
 
-        ############################################
-        data = []
-        #DataWindow(data)
-        
-        ############################################
         line_count.textChanged.connect(lambda: save_count(line_count.text()))
-        btnRun.clicked.connect(lambda: run_script(line_edit1.text(),line_edit2.text(),line_bearer.text(),line_edit4.text()))
-        btnClear.clicked.connect(lambda: small_editor.setPlainText(""))
-        TweetList = []
-        #dataframe()
-        #try:
-        #    print(f'{line_user.text()}-TimeLine.json')
-        #    datax = json.load(open(f'elonmusk-TimeLine.json'))
-        #    list(datax)
-        #    df_nested_list = pd.json_normalize(datax, record_path =['data'])
-        #    list(df_nested_list)
-        #    #print(df_nested_list)
-        #    df_nested_list.rename(columns = {"public_metrics.retweet_count":"retweets", "public_metrics.reply_count":"replies", "public_metrics.like_count":"likes", "public_metrics.quote_count":"quotes", "attachments.media_keys":"media"}, inplace = True)
-        #    self.w = DataWindow(df_nested_list)
-        #except:
-        #    print("data was unavailable")
         
+        #btnRun.clicked.connect(thread_starter())
+        btnClear.clicked.connect(lambda: small_editor.setPlainText(""))
+        value1 = line_edit1.text()
+        value2 = line_edit2.text()
+        value3 = line_bearer.text()
+        value4 = line_edit4.text()
+        TweetList = []
+
         #the basic function to run the api scripts, where the received args are parsed into
         #the right requests and then returned as a dict, which gets turned into json!
+        def thread_starter(user, secret, bearer, token):
+            worker = Worker(run_script(user, secret, bearer, token))
+            self.threadpool.start(worker)
+            return
+        btnRun.clicked.connect(lambda: thread_starter(line_edit1.text(),line_edit2.text(),line_bearer.text(),line_edit4.text()))
+
         def run_script(user, secret, bearer, token):
             if (user == "") or (bearer == ""):
                 small_editor.append("some of the fields werent filled")
@@ -237,6 +232,7 @@ class MainWindow(QWidget):
                 #output = flatten(dict_response)
                 #json.dumps(output)
                 small_editor.setPlainText(json_response)
+            return 
         
         #active switching of the mode from the buttons, default 1 = usertweetlookup
         def mode_switch(s):
@@ -268,6 +264,16 @@ class MainWindow(QWidget):
                 print("opening window!")
             except FileNotFoundError:
                 small_editor.append("No user was specified or the name had a typo")
+
+class Worker(QRunnable):
+    def __init__(self, fn, *args, **kwargs):
+        super(Worker, self).__init__()
+        self.fn = fn
+        self.args = args
+        self.kwargs = kwargs
+
+    def run(self):
+        self.fn(*self.args, **self.kwargs)
 
 if __name__ == '__main__':
     app = QApplication(sys.argv)
