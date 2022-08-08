@@ -1,10 +1,11 @@
+from multiprocessing.pool import ThreadPool
 import sys
+from time import sleep
 import receivers
 import json
 import pandas as pd
 from tokenize import String
 from collections.abc import MutableMapping
-from flatdict import FlatDict
 import threading
 from functools import partial
 from PySide6 import QtCore
@@ -16,6 +17,7 @@ from PySide6.QtWidgets import (QApplication, QComboBox, QDialog,
                                QTextEdit, QVBoxLayout, QWidget, QTableView)
 state = 0
 tweet_count = 10
+#datawindow is the pop up window that is used to display a users data
 class DataWindow(QWidget):
     def __init__(self, data):
         super().__init__()
@@ -23,7 +25,7 @@ class DataWindow(QWidget):
         layout = QGridLayout()
         width = 1200
         height = 700
-
+        #labels and btns for the data windows
         self.label_sort = QLabel("Sorting by:")
         self.btnTime = QPushButton(f"Sort by date")
         self.btnRetweets = QPushButton(f"Sort by retweets")
@@ -41,8 +43,8 @@ class DataWindow(QWidget):
         layout.addWidget(self.btnLikes, 4, 0)
         layout.addWidget(self.btnQuotes, 5, 0)
         layout.addWidget(self.btnID, 6, 0)
-
         layout.addWidget(self.table, 2, 8, 6 ,8)
+        #buttons used to sort he data
         self.btnTime.clicked.connect(lambda: sortbyinput(self, 1, data))
         self.btnRetweets.clicked.connect(lambda: sortbyinput(self, 2, data))
         self.btnLikes.clicked.connect(lambda: sortbyinput(self, 3, data))
@@ -52,7 +54,7 @@ class DataWindow(QWidget):
         self.setMinimumSize(width, height)
         self.setLayout(layout)
         
-
+#data sorter for the dataframe, easily expandable based on input
 def sortbyinput(self, input, data):
     match input:
         case 1:
@@ -92,7 +94,7 @@ def sortbyinput(self, input, data):
             return 
     return
 
-
+#base for the table model that hosts the data passed, called by datawindow
 class TableModel(QAbstractTableModel):
 
     def __init__(self, data):
@@ -122,6 +124,7 @@ class MainWindow(QWidget):
     def __init__(self):
         super().__init__()
         self.threadpool = QThreadPool()
+        print("Multithreading with maximum %d threads" % self.threadpool.maxThreadCount())
         width = 720
         height = 400
         self.setWindowTitle("TwitAPI")
@@ -131,7 +134,7 @@ class MainWindow(QWidget):
         #choose mode buttons
         btnFetch = QPushButton(f"Fetch tweets")
         btnFetch.clicked.connect(lambda: mode_switch(1))
-        btnLikes = QPushButton(f"Fetch likes")
+        btnLikes = QPushButton(f"Fetch images")
         btnLikes.clicked.connect(lambda: mode_switch(2))
         btnTime = QPushButton(f"Fetch timeline")
         btnTime.clicked.connect(lambda: mode_switch(3))
@@ -171,9 +174,10 @@ class MainWindow(QWidget):
         line_count.setText("5")
         layout.addWidget(label1, 4, 0)
         layout.addWidget(line_edit1, 4, 1)
-        line_edit1.setText("elonmusk")
+        #default user for the fetch
+        line_edit1.setText("")
         layout.addWidget(lblBearer, 5, 0)
-        line_bearer.setText("AAAAAAAAAAAAAAAAAAAAAD%2FEcQEAAAAAVkxu3YGhzEpx241560UHPC%2F5uvY%3DdC3dJP4sUPXCeq5f2Hx4Aaz4MONqFaGinKK4eR2sIhrvAaYJus")
+        line_bearer.setText("")
         layout.addWidget(line_bearer, 5, 1)
         layout.addWidget(label2, 6, 0)
         layout.addWidget(line_edit2, 6, 1)
@@ -181,8 +185,6 @@ class MainWindow(QWidget):
         layout.addWidget(line_edit4, 7, 1)
         layout.addWidget(btnRun, 8, 1)
         layout.addWidget(btnClear, 8, 0)
-        
-        #data displayer
         small_editor = QTextEdit()
         small_editor.setPlainText("The results will be displayed here")
         layout.addWidget(small_editor, 10, 0, 6, 6)
@@ -191,46 +193,41 @@ class MainWindow(QWidget):
         layout.setColumnStretch(3, 20)
         layout.setColumnStretch(4, 20)
 
+        #takes the elements and sets/shows
         self.setLayout(layout)
         self.show()
 
         line_count.textChanged.connect(lambda: save_count(line_count.text()))
-        
+
         #btnRun.clicked.connect(thread_starter())
+
+        #clears the text of the small editor
         btnClear.clicked.connect(lambda: small_editor.setPlainText(""))
-        value1 = line_edit1.text()
-        value2 = line_edit2.text()
-        value3 = line_bearer.text()
-        value4 = line_edit4.text()
-        TweetList = []
 
         #the basic function to run the api scripts, where the received args are parsed into
         #the right requests and then returned as a dict, which gets turned into json!
-        def thread_starter(user, secret, bearer, token):
-            worker = Worker(run_script(user, secret, bearer, token))
+        def thread_starter(self, user, secret, bearer, token):
+            worker = Worker(run_script, self, user, secret, bearer, token)
             self.threadpool.start(worker)
-            return
-        btnRun.clicked.connect(lambda: thread_starter(line_edit1.text(),line_edit2.text(),line_bearer.text(),line_edit4.text()))
 
-        def run_script(user, secret, bearer, token):
+        btnRun.clicked.connect(lambda: thread_starter(self, line_edit1.text(),line_edit2.text(),line_bearer.text(),line_edit4.text()))
+        
+        #basis of running the api scripts, checks for faults in args given
+        def run_script(self, user, secret, bearer, token):
             if (user == "") or (bearer == ""):
                 small_editor.append("some of the fields werent filled")
                 print("some of the fields werent filled ,redo")
-
+            #notfies of the missing mode selection
             elif (state == 0):
                 small_editor.append("no mode selected!")
                 print("no mode selected")
 
             else:
-                #print(state, tweet_count, user, secret, bearer, token)
-                x = f"{state}/{tweet_count}/{user}/{secret}/{bearer}/{token}"
+                #passes the args to the receivers, albeit some of it is just placeholder and could
+                #be done by passing the args in a simple way
                 dict_response = receivers.api_script(state, tweet_count, user, secret, bearer, token)
-                #dictToCsv(dict_response)
+                #turns the returned dict to json
                 json_response = json.dumps(dict_response, indent = 4)
-                #DataWindow(data)
-                #small_editor.setPlainText(json_response)
-                #output = flatten(dict_response)
-                #json.dumps(output)
                 small_editor.setPlainText(json_response)
             return 
         
@@ -240,7 +237,7 @@ class MainWindow(QWidget):
             state = s
             print(f"current state: {state}")
 
-        #same as above but for the textfield where the amount of tweets is specified
+        #catches tweet fetch below a certain point
         def save_count(s):
             global tweet_count
             print(f"count entered: {s}")
@@ -250,20 +247,25 @@ class MainWindow(QWidget):
             tweet_count = s
 
 
-        #opens data window with specified persons tweets w
+        #opens data window with specified persons tweets 
         def show_new_window(self):
             try:
-                datax = json.load(open(f'{line_user.text()}-TimeLine.json'))
-                list(datax)
-                df_nested_list = pd.json_normalize(datax, record_path =['data'])
-                list(df_nested_list)
-                #print(df_nested_list)
-                df_nested_list.rename(columns = {"public_metrics.retweet_count":"retweets", "public_metrics.reply_count":"replies", "public_metrics.like_count":"likes", "public_metrics.quote_count":"quotes", "attachments.media_keys":"media"}, inplace = True)
-                self.w = DataWindow(df_nested_list)
-                self.w.show()
-                print("opening window!")
+                with open(f'{line_user.text()}-TimeLine.json', encoding="utf-8") as file:
+                    datax = json.load(file)
+                    list(datax)
+                    #points to the data part of the json, due to the multiple array json twitter uses
+                    df_nested_list = pd.json_normalize(datax, record_path =['data'])
+                    list(df_nested_list)
+                    #handily renaming the variables given, as they are nested and 
+                    #would display parent names
+                    df_nested_list.rename(columns = {"public_metrics.retweet_count":"retweets", "public_metrics.reply_count":"replies", "public_metrics.like_count":"likes", "public_metrics.quote_count":"quotes", "attachments.media_keys":"media"}, inplace = True)
+                    self.w = DataWindow(df_nested_list)
+                    self.w.show()
+                    print("opening window!")
             except FileNotFoundError:
                 small_editor.append("No user was specified or the name had a typo")
+
+
 
 class Worker(QRunnable):
     def __init__(self, fn, *args, **kwargs):
@@ -272,6 +274,7 @@ class Worker(QRunnable):
         self.args = args
         self.kwargs = kwargs
 
+    @Slot()  # QtCore.Slot
     def run(self):
         self.fn(*self.args, **self.kwargs)
 

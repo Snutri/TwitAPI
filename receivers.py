@@ -1,9 +1,9 @@
 from optparse import Values
-from requests_oauthlib import OAuth1Session
 import requests
+from requests_oauthlib import OAuth1Session
 import os
 import json
-from savers import SendToFile, SendToTerminal, SendToArchive
+from savers import SendToFile, SendToTerminal, SendToArchive, SendToImages
 from dotenv import load_dotenv 
 load_dotenv()
 import time
@@ -31,6 +31,29 @@ def UserTweetLookUp(USER_ID, user, TwtCount):
 #    SendToTerminal(json_response)
 #    return json_response
 
+#------------------------------------------------------------------------
+def ImageHandler(user):
+    #fetching images from users timeline json
+    with open(f'{user}-TimeLine.json', 'r', encoding='utf-8') as j:
+        tweets = json.loads(j.read())
+        if not tweets:
+            print("empty list of tweets")
+        x = "fill"
+        i = 0
+        while x != "":
+            try:
+                x = tweets["includes"]["media"][i].get('url')
+                y = tweets["includes"]["media"][i].get('media_key')
+                SendToImages(x, y, user, size="large")
+                print(f"saving image: {x}")
+                i += 1
+            except:
+                print("reached end of tweets")
+                break
+
+        print("all images downloaded")
+
+
 def UserTimelineLookUp(USER_ID, user, TwtCount):
     query = "&expansions=attachments.media_keys&tweet.fields=created_at,public_metrics&media.fields=url&exclude=retweets,replies"
     type = "TimeLine"
@@ -40,6 +63,7 @@ def UserTimelineLookUp(USER_ID, user, TwtCount):
 def imageSearcher(USER_ID, user, TwtCount):
     query = "&expansions=attachments.media_keys&media.fields=url&exclude=retweets,replies"
     type = "Images"
+    print("doing image tweet fetch now!")
     urlFormatter(USER_ID, user, TwtCount, query, type)
     return
 
@@ -73,11 +97,12 @@ def urlFormatter(USER_ID, user, TwtCount, query, type):
 def pullTweets (USER_ID, user, max_results, next_token, query, type):
     url = f"https://api.twitter.com/2/users/{USER_ID}/tweets?max_results={max_results}{query}"
     if (next_token != ""):
-        url += "&pagination_token={next_token}"
+        url += f"&pagination_token={next_token}"
     json_response = connect_to_endpoint(url)
     SendToArchive(json_response, type, user,)
     try:
         next_token = json_response["meta"]["next_token"]
+        print(next_token)
     except KeyError:
         print("no next token returned")
         return
@@ -117,15 +142,14 @@ def api_script(state, tweet_count, user, secret, bearer, token):
     #TweetLikerLookUp("useridhere")
     match state:
         case 1:
-            s = UserTweetLookUp(lookupuser(user), user, f"{tweet_count}")
+            s = UserTimelineLookUp(lookupuser(user), user, f"{tweet_count}")
             return s
         case 2:
-            s = imageSearcher(lookupuser(user), user, f"{tweet_count}")
+            s = ImageHandler(user)
             return s
         case 3:
             s = UserTimelineLookUp(lookupuser(user), user, f"{tweet_count}")
             return s
-
             
 
 

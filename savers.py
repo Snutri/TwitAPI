@@ -4,6 +4,9 @@ import os
 import json
 import pandas as pd
 import jsonmerge
+import requests
+import sys
+import shutil
 time = datetime.datetime.utcnow().strftime("%Y-%m-%d-%H%MZ")
 def SendToFile(jsonfile, searchterm, type):
     with open(f'{type}-{searchterm}-{time}.json', 'w', encoding='utf-8') as f:
@@ -23,7 +26,7 @@ def SendToArchive(jsonfile, searchterm, user):
         #loaded2 = jsonfile
 #
         #loaded1['data'].append(loaded2['data'])
-        with open(filename,'r+') as file:
+        with open(filename,'r+', encoding='utf-8') as file:
         
             a = json.load(file)
             schema = {
@@ -45,9 +48,9 @@ def SendToArchive(jsonfile, searchterm, user):
                       },
                       "places": {
                         "mergeStrategy": "arrayMergeById"
-                      #},
-                      #"media": {
-                      #  "mergeStrategy": "arrayMergeById"
+                      },
+                      "media": {
+                        "mergeStrategy": "append"
                       }
                     }
                   }
@@ -65,6 +68,31 @@ def SendToArchive(jsonfile, searchterm, user):
  
     return 1
 
+def SendToImages(image, key, user, size="large"):
+  count = 0
+  try:
+        path = f"{user}_images"
+        os.mkdir(path)
+        print("Directory " , path ,  " Created ") 
+  except FileExistsError:
+        print("Directory " , path ,  " already exists")
+  if image:
+      # image's path with a new name
+      ext = os.path.splitext(image)[1]
+      
+      name = key + ext 
+      save_dest = os.path.join(path, name)
+      # save the image in the specified directory if
+      if not (os.path.exists(save_dest)):
+          r = requests.get(image + ":" + size, stream=True)
+          if r.status_code == 200:
+              with open(save_dest, "wb") as f:
+                  r.raw.decode_content = True
+                  shutil.copyfileobj(r.raw, f)
+              count += 1
+              print(f"{name} saved\n")
+      else:
+          print(f"Skipping {name}: already downloaded")
 #comments of shame on appending to file
 
             #purely adds second dicts values after the existing one
