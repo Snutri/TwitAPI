@@ -68,14 +68,9 @@ def SendToArchive(jsonfile, searchterm, user):
  
     return 1
 
-def SendToImages(image, key, user, size="large"):
+def SendToImages(path, image, key):
   count = 0
-  try:
-        path = f"{user}_images"
-        os.mkdir(path)
-        print("Directory " , path ,  " Created ") 
-  except FileExistsError:
-        print("Directory " , path ,  " already exists")
+  size="large"
   if image:
       # image's path with a new name
       ext = os.path.splitext(image)[1]
@@ -90,7 +85,7 @@ def SendToImages(image, key, user, size="large"):
                   r.raw.decode_content = True
                   shutil.copyfileobj(r.raw, f)
               count += 1
-              print(f"{name} saved\n")
+              print(f"{name} saved")
       else:
           print(f"Skipping {name}: already downloaded")
 #comments of shame on appending to file

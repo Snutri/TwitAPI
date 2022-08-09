@@ -4,12 +4,10 @@ from time import sleep
 import receivers
 import json
 import pandas as pd
-from tokenize import String
-from collections.abc import MutableMapping
 import threading
-from functools import partial
+import traceback
 from PySide6 import QtCore
-from PySide6.QtCore import Qt, Signal, Slot, QAbstractTableModel, QRunnable, QThreadPool
+from PySide6.QtCore import Qt, Signal, Slot, QAbstractTableModel, QRunnable, QThreadPool, QObject
 from PySide6.QtWidgets import (QApplication, QComboBox, QDialog,
                                QDialogButtonBox, QGridLayout, QGroupBox,
                                QFormLayout, QHBoxLayout, QLabel, QLineEdit,
@@ -45,17 +43,17 @@ class DataWindow(QWidget):
         layout.addWidget(self.btnID, 6, 0)
         layout.addWidget(self.table, 2, 8, 6 ,8)
         #buttons used to sort he data
-        self.btnTime.clicked.connect(lambda: sortbyinput(self, 1, data))
-        self.btnRetweets.clicked.connect(lambda: sortbyinput(self, 2, data))
-        self.btnLikes.clicked.connect(lambda: sortbyinput(self, 3, data))
-        self.btnQuotes.clicked.connect(lambda: sortbyinput(self, 4, data))
-        self.btnID.clicked.connect(lambda: sortbyinput(self, 5, data))
-        self.btnReplies.clicked.connect(lambda: sortbyinput(self, 6, data))
+        self.btnTime.clicked.connect(lambda: sort_by_input(self, 1, data))
+        self.btnRetweets.clicked.connect(lambda: sort_by_input(self, 2, data))
+        self.btnLikes.clicked.connect(lambda: sort_by_input(self, 3, data))
+        self.btnQuotes.clicked.connect(lambda: sort_by_input(self, 4, data))
+        self.btnID.clicked.connect(lambda: sort_by_input(self, 5, data))
+        self.btnReplies.clicked.connect(lambda: sort_by_input(self, 6, data))
         self.setMinimumSize(width, height)
         self.setLayout(layout)
         
 #data sorter for the dataframe, easily expandable based on input
-def sortbyinput(self, input, data):
+def sort_by_input(self, input, data):
     match input:
         case 1:
             data.sort_values(by=['created_at'], ascending=False, inplace=True, ignore_index=True)
@@ -210,7 +208,8 @@ class MainWindow(QWidget):
             worker = Worker(run_script, self, user, secret, bearer, token)
             self.threadpool.start(worker)
 
-        btnRun.clicked.connect(lambda: thread_starter(self, line_edit1.text(),line_edit2.text(),line_bearer.text(),line_edit4.text()))
+        btnRun.clicked.connect(lambda: thread_starter(self, line_edit1.text(),
+                        line_edit2.text(),line_bearer.text(),line_edit4.text()))
         
         #basis of running the api scripts, checks for faults in args given
         def run_script(self, user, secret, bearer, token):
@@ -223,12 +222,10 @@ class MainWindow(QWidget):
                 print("no mode selected")
 
             else:
-                #passes the args to the receivers, albeit some of it is just placeholder and could
-                #be done by passing the args in a simple way
-                dict_response = receivers.api_script(state, tweet_count, user, secret, bearer, token)
-                #turns the returned dict to json
-                json_response = json.dumps(dict_response, indent = 4)
-                small_editor.setPlainText(json_response)
+                #passes the args to the receivers, 
+                # albeit some of it is just placeholder and could
+                # be done by passing the args in a simple way
+                receivers.api_script(state, tweet_count, user, secret, bearer, token)
             return 
         
         #active switching of the mode from the buttons, default 1 = usertweetlookup
@@ -237,14 +234,17 @@ class MainWindow(QWidget):
             state = s
             print(f"current state: {state}")
 
+
         #catches tweet fetch below a certain point
         def save_count(s):
             global tweet_count
             print(f"count entered: {s}")
             if int(s) <= 9:
-                small_editor.setPlainText("numbers below 10 will get increased to 10 due to api limitations!")
+                small_editor.setPlainText(
+                    "numbers below 10 will get increased to 10 due to api limitations!")
                 s = 10
             tweet_count = s
+
 
 
         #opens data window with specified persons tweets 
@@ -253,12 +253,18 @@ class MainWindow(QWidget):
                 with open(f'{line_user.text()}-TimeLine.json', encoding="utf-8") as file:
                     datax = json.load(file)
                     list(datax)
-                    #points to the data part of the json, due to the multiple array json twitter uses
+                    #points to the data part of the json, 
+                    # due to the multiple array json twitter uses
                     df_nested_list = pd.json_normalize(datax, record_path =['data'])
                     list(df_nested_list)
                     #handily renaming the variables given, as they are nested and 
                     #would display parent names
-                    df_nested_list.rename(columns = {"public_metrics.retweet_count":"retweets", "public_metrics.reply_count":"replies", "public_metrics.like_count":"likes", "public_metrics.quote_count":"quotes", "attachments.media_keys":"media"}, inplace = True)
+                    df_nested_list.rename(columns = {
+                                    "public_metrics.retweet_count":"retweets", 
+                                    "public_metrics.reply_count":"replies", 
+                                    "public_metrics.like_count":"likes", 
+                                    "public_metrics.quote_count":"quotes", 
+                                    "attachments.media_keys":"media"}, inplace = True)
                     self.w = DataWindow(df_nested_list)
                     self.w.show()
                     print("opening window!")
@@ -266,17 +272,25 @@ class MainWindow(QWidget):
                 small_editor.append("No user was specified or the name had a typo")
 
 
-
 class Worker(QRunnable):
+
     def __init__(self, fn, *args, **kwargs):
         super(Worker, self).__init__()
+
+        # Store constructor arguments (re-used for processing)
         self.fn = fn
         self.args = args
         self.kwargs = kwargs
 
-    @Slot()  # QtCore.Slot
+    @Slot()
     def run(self):
-        self.fn(*self.args, **self.kwargs)
+
+        # Retrieve args/kwargs here; and fire processing using them
+        try:
+            self.fn(*self.args, **self.kwargs)
+        except Exception as e:
+            print(e)
+
 
 if __name__ == '__main__':
     app = QApplication(sys.argv)
